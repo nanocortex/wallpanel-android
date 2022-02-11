@@ -31,7 +31,6 @@ import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.Observer
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.koushikdutta.async.AsyncServer
-import com.koushikdutta.async.ByteBufferList
 import com.koushikdutta.async.http.body.JSONObjectBody
 import com.koushikdutta.async.http.body.StringBody
 import com.koushikdutta.async.http.server.AsyncHttpServer
@@ -72,10 +71,6 @@ import org.json.JSONException
 import org.json.JSONObject
 import timber.log.Timber
 import java.io.IOException
-import java.net.URLDecoder
-import java.net.URLEncoder
-import java.net.URLEncoder.encode
-import java.nio.ByteBuffer
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
@@ -85,8 +80,6 @@ class WallPanelService : LifecycleService(), MQTTModule.MQTTListener {
 
     @Inject
     lateinit var configuration: Configuration
-
-    private var cameraReader: CameraReader? = null
 
     @Inject
     lateinit var sensorReader: SensorReader
@@ -177,7 +170,6 @@ class WallPanelService : LifecycleService(), MQTTModule.MQTTListener {
 
         configureMqtt()
         configurePowerOptions()
-        configureCamera()
         startHttp()
         configureAudioPlayer()
         configureTextToSpeech()
@@ -202,7 +194,6 @@ class WallPanelService : LifecycleService(), MQTTModule.MQTTListener {
         if (localBroadCastManager != null) {
             localBroadCastManager?.unregisterReceiver(mBroadcastReceiver)
         }
-        cameraReader?.stopCamera()
         sensorReader.stopReadings()
         stopHttp()
         stopPowerOptions()
@@ -377,16 +368,6 @@ class WallPanelService : LifecycleService(), MQTTModule.MQTTListener {
         mqttModule?.publish(topic, message, retain)
     }
 
-    private fun configureCamera() {
-        val cameraEnabled = configuration.cameraEnabled
-        if (cameraEnabled && cameraReader == null) {
-            cameraReader = CameraReader(applicationContext)
-            cameraReader?.startCamera(cameraDetectorCallback, configuration)
-        } else if (cameraEnabled) {
-            cameraReader?.startCamera(cameraDetectorCallback, configuration)
-        }
-    }
-
     private fun configureTextToSpeech() {
         if (textToSpeechModule == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             textToSpeechModule = TextToSpeechModule(applicationContext)
@@ -466,118 +447,20 @@ class WallPanelService : LifecycleService(), MQTTModule.MQTTListener {
             Timber.i("Enabled REST Endpoints")
         }
 
-        if (httpServer != null && configuration.httpMJPEGEnabled) {
-            startMJPEG()
-            httpServer?.addAction("GET", "/camera/stream") { _, response ->
-                Timber.i("GET Arrived (/camera/stream)")
-                startMJPEG(response)
-            }
-            Timber.i("Enabled MJPEG Endpoint")
-        }
     }
 
     private fun stopHttp() {
         Timber.d("stopHttp")
         httpServer?.let {
-            stopMJPEG()
             it.stop()
             httpServer = null
         }
-    }
-
-    private fun startMJPEG() {
-        Timber.d("startMJPEG")
-        cameraReader?.let {
-            it.getJpeg().observe(this, Observer { jpeg ->
-                if (mJpegSockets.size > 0 && jpeg != null) {
-                    var i = 0
-                    while (i < mJpegSockets.size) {
-                        val s = mJpegSockets[i]
-                        val bb = ByteBufferList()
-                        if (s.isOpen) {
-                            bb.recycle()
-                            bb.add(ByteBuffer.wrap("--jpgboundary\r\nContent-Type: image/jpeg\r\n".toByteArray()))
-                            bb.add(ByteBuffer.wrap(("Content-Length: " + jpeg.size + "\r\n\r\n").toByteArray()))
-                            bb.add(ByteBuffer.wrap(jpeg))
-                            bb.add(ByteBuffer.wrap("\r\n".toByteArray()))
-                            s.write(bb)
-                        } else {
-                            mJpegSockets.removeAt(i)
-                            i--
-                            Timber.i("MJPEG Session Count is " + mJpegSockets.size)
-                        }
-                        i++
-                    }
-                }
-            })
-        }
-    }
-
-    // Attempt to restart camera and any optional camera options such as motion and streaming
-    private fun restartCamera() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && configuration.cameraPermissionsShown) {
-            configuration.cameraEnabled = true
-            configureCamera()
-            startHttp()
-            publishDiscovery()
-            publishApplicationState()
-        } else {
-            configuration.cameraEnabled = true
-            configureCamera()
-            startHttp()
-            publishDiscovery()
-            publishApplicationState()
-        }
-    }
-
-    // Attempt to stop camera and any optional camera options such as motion and streaming
-    private fun stopCamera() {
-        Timber.d("stopCamera")
-        configuration.cameraEnabled = false
-        stopMJPEG()
-        stopHttp()
-        cameraReader?.stopCamera()
-        publishDiscovery()
-        publishApplicationState()
-    }
-
-    // TODO we stop entire camera not just streaming
-    private fun stopMJPEG() {
-        Timber.d("stopMJPEG Called")
-        mJpegSockets.clear()
-        //cameraReader?.getJpeg()?.removeObservers(this)
-        httpServer?.removeAction("GET", "/camera/stream")
-    }
-
-    private fun startMJPEG(response: AsyncHttpServerResponse) {
-        Timber.d("startmJpeg Called")
-        if (mJpegSockets.size < configuration.httpMJPEGMaxStreams) {
-            Timber.i("Starting new MJPEG stream")
-            response.headers.add("Cache-Control", "no-cache")
-            response.headers.add("Connection", "close")
-            response.headers.add("Pragma", "no-cache")
-            response.setContentType("multipart/x-mixed-replace; boundary=--jpgboundary")
-            response.code(200)
-            response.writeHead()
-            mJpegSockets.add(response)
-        } else {
-            Timber.i("MJPEG stream limit was reached, not starting")
-            response.send("Max streams exceeded")
-            response.end()
-        }
-        Timber.i("MJPEG Session Count is " + mJpegSockets.size)
     }
 
     private fun processCommand(commandJson: JSONObject): Boolean {
         Timber.d("processCommand $commandJson")
         try {
             if (commandJson.has(COMMAND_CAMERA)) {
-                val enableCamera = commandJson.getBoolean(COMMAND_CAMERA)
-                if (!enableCamera) {
-                    stopCamera()
-                } else if (enableCamera) {
-                    restartCamera()
-                }
             }
             if (commandJson.has(COMMAND_URL)) {
                 browseUrl(commandJson.getString(COMMAND_URL))
@@ -867,29 +750,6 @@ class WallPanelService : LifecycleService(), MQTTModule.MQTTListener {
             }
         }
 
-        if (configuration.cameraFaceEnabled && configuration.cameraEnabled) {
-            val faceDiscovery = getBinarySensorDiscoveryDef(getString(R.string.mqtt_sensor_face_detected), COMMAND_SENSOR_FACE, "value", "occupancy", "face")
-            publishMessage("${configuration.mqttDiscoveryTopic}/binary_sensor/${configuration.mqttClientId}/face/config", faceDiscovery.toString(), true)
-        } else {
-            publishMessage("${configuration.mqttDiscoveryTopic}/binary_sensor/${configuration.mqttClientId}/face/config", "", false)
-        }
-
-        if (configuration.cameraMotionEnabled && configuration.cameraEnabled) {
-            val motionDiscovery = getBinarySensorDiscoveryDef(getString(R.string.mqtt_sensor_motion_detected), COMMAND_SENSOR_MOTION, "value", "motion", "motion")
-            publishMessage("${configuration.mqttDiscoveryTopic}/binary_sensor/${configuration.mqttClientId}/motion/config", motionDiscovery.toString(), true)
-        } else {
-            publishMessage("${configuration.mqttDiscoveryTopic}/binary_sensor/${configuration.mqttClientId}/motion/config", "", false)
-        }
-
-        if (configuration.cameraQRCodeEnabled && configuration.cameraEnabled) {
-            val qrDiscovery = JSONObject()
-            qrDiscovery.put("topic", "${configuration.mqttBaseTopic}${COMMAND_SENSOR_QR_CODE}")
-            qrDiscovery.put("value_template", "{{ value_json.value }}")
-            qrDiscovery.put("device", getDeviceDiscoveryDef())
-            publishMessage("${configuration.mqttDiscoveryTopic}/tag/${configuration.mqttClientId}/qr/config", qrDiscovery.toString(), true)
-        } else {
-            publishMessage("${configuration.mqttDiscoveryTopic}/tag/${configuration.mqttClientId}/qr/config", "", false)
-        }
     }
 
     private fun clearMotionDetected() {
@@ -1018,46 +878,6 @@ class WallPanelService : LifecycleService(), MQTTModule.MQTTListener {
         override fun publishSensorData(sensorName: String, sensorData: JSONObject) {
             publishApplicationState()
             publishCommand(COMMAND_SENSOR + sensorName, sensorData)
-        }
-    }
-
-    private val cameraDetectorCallback = object : CameraCallback {
-        override fun onDetectorError() {
-            if (configuration.cameraFaceEnabled || configuration.cameraQRCodeEnabled) {
-                sendToastMessage(getString(R.string.error_missing_vision_lib))
-            }
-        }
-
-        override fun onCameraError() {
-            sendToastMessage(getString(R.string.toast_camera_source_error))
-        }
-
-        override fun onMotionDetected() {
-            Timber.i("Motion detected")
-            if (configuration.cameraMotionWake) {
-                configurePowerOptions()
-                wakeScreen()
-            }
-            publishMotionDetected()
-        }
-
-        override fun onTooDark() {
-            // Timber.i("Too dark for motion detection")
-        }
-
-        override fun onFaceDetected() {
-            Timber.i("Face detected")
-            Timber.d("configuration.cameraMotionBright ${configuration.cameraMotionBright}")
-            if (configuration.cameraFaceWake) {
-                configurePowerOptions()
-                wakeScreen() // temp turn on screen
-            }
-            publishFaceDetected()
-        }
-
-        override fun onQRCode(data: String) {
-            Timber.i("QR Code Received: $data")
-            publishQrCode(data)
         }
     }
 

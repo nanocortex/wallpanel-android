@@ -26,15 +26,6 @@
     <uses-feature
         android:name="android.hardware.microphone"
         android:required="false" />
-    <uses-feature
-        android:name="android.hardware.camera"
-        android:required="false" />
-    <uses-feature
-        android:name="android.hardware.camera.front"
-        android:required="false" />
-    <uses-feature
-        android:name="android.hardware.camera.autofocus"
-        android:required="false" />
 
     <application
         android:name=".WallPanel"
@@ -72,9 +63,6 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ui.activities.LiveCameraActivity"
-            android:label="@string/title_camera_test" />
-        <activity
             android:name=".ui.activities.SettingsActivity"
             android:label="@string/title_settings" />
 
@@ -101,9 +89,6 @@
         <meta-data
             android:name="com.google.android.gms.vision.DEPENDENCIES"
             android:value="face,barcode" />
-        <meta-data
-            android:name="com.google.android.gms.version"
-            android:value="@integer/google_play_services_version" />
     </application>
 
 </manifest>

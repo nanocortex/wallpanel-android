@@ -30,11 +30,6 @@ import dagger.multibindings.IntoMap
 @Module
 internal abstract class AndroidBindingModule {
 
-    @Binds
-    @IntoMap
-    @ViewModelKey(DetectionViewModel::class)
-    abstract fun cameraViewModel(viewModel: DetectionViewModel): ViewModel
-
     @ContributesAndroidInjector
     internal abstract fun alarmService(): WallPanelService
 
@@ -48,9 +43,6 @@ internal abstract class AndroidBindingModule {
     internal abstract fun browserActivityNative(): BrowserActivityNative
 
     @ContributesAndroidInjector
-    internal abstract fun liveCameraActivity(): LiveCameraActivity
-
-    @ContributesAndroidInjector
     internal abstract fun bootupReceiver(): BootUpReceiver
 
     @ContributesAndroidInjector
@@ -60,22 +52,10 @@ internal abstract class AndroidBindingModule {
     internal abstract fun settingsFragment(): SettingsFragment
 
     @ContributesAndroidInjector
-    internal abstract fun cameraSettings(): CameraSettingsFragment
-
-    @ContributesAndroidInjector
     internal abstract fun mqttSettings(): MqttSettingsFragment
 
     @ContributesAndroidInjector
     internal abstract fun httpSettings(): HttpSettingsFragment
-
-    @ContributesAndroidInjector
-    internal abstract fun motionSettings(): MotionSettingsFragment
-
-    @ContributesAndroidInjector
-    internal abstract fun faceSettings(): FaceSettingsFragment
-
-    @ContributesAndroidInjector
-    internal abstract fun qrCodeSettings(): QrCodeSettingsFragment
 
     @ContributesAndroidInjector
     internal abstract fun sensorsSettings(): SensorsSettingsFragment

@@ -270,10 +270,6 @@ class SettingsFragment : BaseSettingsFragment() {
         }
 
         try {
-            cameraPreference?.onPreferenceClickListener = Preference.OnPreferenceClickListener { preference ->
-                view.let { Navigation.findNavController(it).navigate(R.id.camera_action) }
-                false
-            }
             mqttPreference?.onPreferenceClickListener = Preference.OnPreferenceClickListener { preference ->
                 view.let { Navigation.findNavController(it).navigate(R.id.mqtt_action) }
                 false
