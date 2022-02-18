@@ -204,7 +204,7 @@ class SettingsFragment : BaseSettingsFragment() {
         userAgentPreference.text = configuration.browserUserAgent
         dashboardPreference?.text = configuration.appLaunchUrl
 
-        if(configuration.appLaunchUrl.isNotEmpty()) {
+        if (configuration.appLaunchUrl.isNotEmpty()) {
             dashboardPreference?.summary = configuration.appLaunchUrl
         }
 
@@ -226,11 +226,15 @@ class SettingsFragment : BaseSettingsFragment() {
         inactivityPreference?.value = configuration.inactivityTime.toString()
 
         if (configuration.inactivityTime < SECONDS_VALUE) {
-            inactivityPreference?.summary = getString(R.string.preference_summary_inactivity_seconds,
-                    DateUtils.convertInactivityTime(configuration.inactivityTime))
+            inactivityPreference?.summary = getString(
+                R.string.preference_summary_inactivity_seconds,
+                DateUtils.convertInactivityTime(configuration.inactivityTime)
+            )
         } else {
-            inactivityPreference?.summary = getString(R.string.preference_summary_inactivity_minutes,
-                    DateUtils.convertInactivityTime(configuration.inactivityTime))
+            inactivityPreference?.summary = getString(
+                R.string.preference_summary_inactivity_minutes,
+                DateUtils.convertInactivityTime(configuration.inactivityTime)
+            )
         }
 
         settingsLocationPreference.setDefaultValue(configuration.settingsLocation)
@@ -258,14 +262,14 @@ class SettingsFragment : BaseSettingsFragment() {
         dimScreensaver.isChecked = configuration.hasDimScreenSaver
         wallpaperSaverPreference.isChecked = configuration.hasScreenSaverWallpaper
 
-        if( wallpaperSaverPreference.isChecked) {
+        if (wallpaperSaverPreference.isChecked) {
             setWallPaperScreensaver(true)
         } else if (webScreenSaver.isChecked) {
             setWebScreensaver(true)
         }
 
         val webScreensaverUrlValue = configuration.webScreenSaverUrl
-        if(webScreensaverUrlValue.isNotEmpty()) {
+        if (webScreensaverUrlValue.isNotEmpty()) {
             webScreenSaverUrl.text = webScreensaverUrlValue
         }
 
@@ -300,7 +304,7 @@ class SettingsFragment : BaseSettingsFragment() {
                 Toast.makeText(requireContext(), getString(R.string.toast_screen_brightness_captured), Toast.LENGTH_SHORT).show()
                 false
             }
-        }  catch (e: IllegalArgumentException) {
+        } catch (e: IllegalArgumentException) {
             Timber.d(e.message)
         }
     }
@@ -401,7 +405,7 @@ class SettingsFragment : BaseSettingsFragment() {
             PREF_SETTINGS_SCREENSAVER_DIM -> {
                 val value = dimScreensaver.isChecked
                 configuration.hasDimScreenSaver = value
-                if(value) {
+                if (value) {
                     setWallPaperScreensaver(false)
                     setWebScreensaver(false)
                 }
@@ -424,7 +428,7 @@ class SettingsFragment : BaseSettingsFragment() {
     private fun setWebScreensaver(value: Boolean) {
         configuration.webScreenSaver = value
         webScreenSaver.isChecked = value
-        if(value) {
+        if (value) {
             configuration.hasScreenSaverWallpaper = false
             wallpaperSaverPreference.isChecked = false
             setDimScreensaver(false)
@@ -434,7 +438,7 @@ class SettingsFragment : BaseSettingsFragment() {
     private fun setWallPaperScreensaver(value: Boolean) {
         configuration.hasScreenSaverWallpaper = value
         wallpaperSaverPreference.isChecked = value
-        if(value) {
+        if (value) {
             configuration.webScreenSaver = false
             webScreenSaver.isChecked = false
             setDimScreensaver(false)
@@ -456,13 +460,13 @@ class SettingsFragment : BaseSettingsFragment() {
                 // launch the dialog to provide permissions
                 configuration.writeScreenPermissionsShown = true
                 AlertDialog.Builder(requireActivity())
-                        .setMessage(getString(R.string.dialog_write_permissions_description))
-                        .setPositiveButton(android.R.string.ok) { _, _ ->
-                            launchWriteSettings()
-                        }
-                        .setNegativeButton(android.R.string.cancel) { _, _ ->
-                            Toast.makeText(requireActivity(), getString(R.string.toast_write_permissions_denied), Toast.LENGTH_LONG).show()
-                        }.show()
+                    .setMessage(getString(R.string.dialog_write_permissions_description))
+                    .setPositiveButton(android.R.string.ok) { _, _ ->
+                        launchWriteSettings()
+                    }
+                    .setNegativeButton(android.R.string.cancel) { _, _ ->
+                        Toast.makeText(requireActivity(), getString(R.string.toast_write_permissions_denied), Toast.LENGTH_LONG).show()
+                    }.show()
             }
         } else if (configuration.useScreenBrightness) {
             // rewrite the screen brightness levels until we have a slider in place
@@ -507,6 +511,7 @@ class SettingsFragment : BaseSettingsFragment() {
                         Toast.makeText(activity, R.string.toast_code_not_match, Toast.LENGTH_LONG).show()
                     }
                 }
+
                 override fun onError() {}
                 override fun onCancel() {
                     confirmCode = false

@@ -24,11 +24,10 @@ import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.util.Log
 import android.view.View
-import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.view.WindowManager
-import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -138,6 +137,12 @@ abstract class BaseBrowserActivity : DaggerAppCompatActivity() {
                 hideScreenSaver()
             } else if (BROADCAST_SERVICE_STARTED == intent.action && !isFinishing) {
                 //firstLoadUrl() // load the url after service started
+//                val url = "http://192.168.211.5:8123?kiosk"
+//                configuration.appLaunchUrl = url
+//                url.let {
+//                    loadWebViewUrl(url)
+//                    stopDisconnectTimer()
+//                }
             }
         }
     }
@@ -268,8 +273,10 @@ abstract class BaseBrowserActivity : DaggerAppCompatActivity() {
                         or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
                 else -> {
                     visibility = (View.SYSTEM_UI_FLAG_HIDE_NAVIGATION)
-                    window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                            WindowManager.LayoutParams.FLAG_FULLSCREEN)
+                    window.setFlags(
+                        WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                        WindowManager.LayoutParams.FLAG_FULLSCREEN
+                    )
                 }
             }
             decorView?.systemUiVisibility = visibility
@@ -340,23 +347,26 @@ abstract class BaseBrowserActivity : DaggerAppCompatActivity() {
             inactivityHandler.removeCallbacks(inactivityCallback)
             resetScreenBrightness(true)
         } else if ((configuration.hasClockScreenSaver
-                        || configuration.webScreenSaver
-                        || configuration.hasScreenSaverWallpaper
-                        || configuration.hasDimScreenSaver)
-                && !isFinishing) {
+                    || configuration.webScreenSaver
+                    || configuration.hasScreenSaverWallpaper
+                    || configuration.hasDimScreenSaver)
+            && !isFinishing
+        ) {
             inactivityHandler.removeCallbacks(inactivityCallback)
-            dialogUtils.showScreenSaver(this@BaseBrowserActivity,
-                    {
-                        dialogUtils.hideScreenSaverDialog()
-                        resetScreenBrightness(false)
-                        resetInactivityTimer()
-                    },
-                    configuration.webScreenSaver,
-                    configuration.webScreenSaverUrl,
-                    configuration.hasScreenSaverWallpaper,
-                    configuration.hasClockScreenSaver,
-                    configuration.imageRotation.toLong(),
-                    configuration.appPreventSleep)
+            dialogUtils.showScreenSaver(
+                this@BaseBrowserActivity,
+                {
+                    dialogUtils.hideScreenSaverDialog()
+                    resetScreenBrightness(false)
+                    resetInactivityTimer()
+                },
+                configuration.webScreenSaver,
+                configuration.webScreenSaverUrl,
+                configuration.hasScreenSaverWallpaper,
+                configuration.hasClockScreenSaver,
+                configuration.imageRotation.toLong(),
+                configuration.appPreventSleep
+            )
             resetScreenBrightness(true)
         }
     }
@@ -380,6 +390,5 @@ abstract class BaseBrowserActivity : DaggerAppCompatActivity() {
         const val BROADCAST_ACTION_RELOAD_PAGE = "BROADCAST_ACTION_RELOAD_PAGE"
         const val BROADCAST_ACTION_OPEN_SETTINGS = "BROADCAST_ACTION_OPEN_SETTINGS"
         const val REQUEST_CODE_PERMISSION_AUDIO = 12
-        const val REQUEST_CODE_PERMISSION_CAMERA = 13
     }
 }

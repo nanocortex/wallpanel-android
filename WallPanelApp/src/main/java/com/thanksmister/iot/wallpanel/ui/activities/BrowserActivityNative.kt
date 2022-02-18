@@ -16,17 +16,17 @@
 
 package com.thanksmister.iot.wallpanel.ui.activities
 
-import android.Manifest
 import android.annotation.SuppressLint
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.http.SslError
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
-import android.view.*
+import android.view.Gravity
+import android.view.MotionEvent
+import android.view.View
+import android.view.ViewTreeObserver
 import android.webkit.*
-import android.widget.Button
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
@@ -115,19 +115,19 @@ class BrowserActivityNative : BaseBrowserActivity(), LifecycleObserver {
         }
 
         connectionLiveData = ConnectionLiveData(this)
-        connectionLiveData?.observe(this, { connected ->
+        connectionLiveData?.observe(this) { connected ->
             if (connected && isConnected.not()) {
                 isConnected = true
-                if(awaitingReconnect) { // reload the page if there was error initially loading page due to network disconnect
+                if (awaitingReconnect) { // reload the page if there was error initially loading page due to network disconnect
                     stopReloadDelay()
                     initWebPageLoad()
-                } else if(configuration.browserRefreshDisconnect) { // reload page on network reconnect
+                } else if (configuration.browserRefreshDisconnect) { // reload page on network reconnect
                     initWebPageLoad()
                 }
             } else if (connected.not()) {
                 isConnected = false
             }
-        })
+        }
 
         mWebView.setLayerType(View.LAYER_TYPE_SOFTWARE, null)
 
@@ -165,9 +165,6 @@ class BrowserActivityNative : BaseBrowserActivity(), LifecycleObserver {
                         PermissionRequest.RESOURCE_AUDIO_CAPTURE -> {
                             askForWebkitPermission(it, REQUEST_CODE_PERMISSION_AUDIO)
                         }
-                        PermissionRequest.RESOURCE_VIDEO_CAPTURE -> {
-                            askForWebkitPermission(it, REQUEST_CODE_PERMISSION_CAMERA)
-                        }
                     }
                 }
             }
@@ -182,6 +179,13 @@ class BrowserActivityNative : BaseBrowserActivity(), LifecycleObserver {
                 return true
             }
 
+            override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
+                if (consoleMessage != null && consoleMessage.message().contains("Uncaught ReferenceError: regeneratorRuntime is not defined")) {
+                    println("Refreshing because of error");
+                    mWebView.reload();
+                }
+                return super.onConsoleMessage(consoleMessage)
+            }
 
         }
 
@@ -317,6 +321,12 @@ class BrowserActivityNative : BaseBrowserActivity(), LifecycleObserver {
     @SuppressLint("SetJavaScriptEnabled")
     // TODO handle deprecated web settings
     override fun configureWebSettings(userAgent: String) {
+//        Timber.i("Configure web settings")
+//        Timber.i("UA: " + mWebView.getSettings().getUserAgentString());
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//            Timber.i(WebView.getCurrentWebViewPackage()!!.versionName.toString())
+//        }
+
         if(webSettings == null) {
             webSettings = mWebView.settings
         }
